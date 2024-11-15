@@ -42,4 +42,6 @@ class OllamaModel:
         
         # return self.output
     
-        
+if __name__ == "__main__":
+    model = OllamaModel()
+    model.ans("Hello")

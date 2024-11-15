@@ -1,10 +1,19 @@
-from langchain.chains import RetrievalQA
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+from model import OllamaModel
 
-from app.config import config
+def main():
+    bot = OllamaModel()
+    while True:
+        inp = input(">> ")
+        if inp == "/quit":
+            print('fin de conversation')
+            break
+        
+        print("Bot:", end=" ")
+        for chunk in bot.ans(inp):
+            print(chunk, end='', flush=True)
+        print()
+        
+    return 0
 
-llm = OpenAI()
-embeddings = OpenAIEmbeddings()
-db = FAISS.load_local(config.DB_PATH, embeddings)
-qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=db.as_retriever())
+if __name__ == "__main__":
+    main()
