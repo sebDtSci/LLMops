@@ -1,9 +1,12 @@
-From python:3.10
-
-RUN pip install ollama transformers langchain
-
-COPY . /app
+FROM python:3.12
 
 WORKDIR /app
 
-CMD ["python", "main.py"]
+COPY requirements.txt requirements.txt
+COPY app/ app/
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+EXPOSE 8000
+
+CMD ["python", "app/main.py"]
