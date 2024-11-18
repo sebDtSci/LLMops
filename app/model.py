@@ -1,12 +1,16 @@
-from langchain.memory import ChatMessageHistory
-import ollama
+from langchain_ollama.llms import OllamaLLM
+from langchain.memory import ConversationSummaryMemory, ChatMessageHistory
+from langchain.llms.base import BaseLanguageModel
+
 
 class OllamaModel:
     def __init__(self, model:str = "mistral:latest", ollama_options:dict = None):
-        self.model = model
-        self._ollama_option = ollama_options if ollama_options else {'temperature': 1}
+        self.ollama_model = OllamaLLM(
+            model=model,
+            options=ollama_options if ollama_options else {'temperature': 1} # vérifier le paramétrage de la température 0 pour déterministe langchain et 1 pour ollama_python
+            )
         self.output = ""
-        self.history = ChatMessageHistory()
+        self.history = ConversationSummaryMemory(llm=self.ollama_model)
         self.running = False
         
     def ans(self, input: str):
@@ -14,34 +18,48 @@ class OllamaModel:
         context: str
         self.running = True
         self.output = ""
+        
+        mem = self.history.load_memory_variables({}).get('history', "")
+        
         prompt = (
             "Vous êtes un assistant intelligent. Utilisez les informations suivantes pour aider l'utilisateur.\n\n"
             "Mémoire du chatbot (à ne pas montrer à l'utilisateur) :\n"
-            f"{self.history.messages}\n\n"
-            "Contexte pertinent :\n"
-            f"{context}\n\n"
+            f"{mem}\n\n"
+            # "Contexte pertinent :\n"
+            # f"{context}\n\n"
             "Question de l'utilisateur :\n"
             f"{input}\n\n"
             "Répondez de manière claire et CONCISE et avec une mise en forme lisible et structuré :\n"
         )
-        # self.output = ollama.predict(self.model, prompt, **self._ollama_option)
-        responce = ollama.generate(
-            model = self.model,
-            prompt = prompt,
-            stream = True,
-            options = self._ollama_option
-            )
         
-        self.output = ""
-        for chunk in responce:
-            self.output += chunk['responce']
-            yield chunk['responce']
+        response = self.ollama_model.generate(
+            prompts=[prompt],
+            stream=True
+        )
         
-        self.history.add_user_message(input)
-        self.history.add_ai_message(self.output)
         
-        # return self.output
+        # self.output = ""
+        # for chunk in response:
+            # self.output += chunk['response']
+            # yield chunk['response']
+        
+        for chunk in response:
+            if isinstance(chunk, tuple) and chunk[0] == 'generations':
+                generation_list = chunk[1]
+                if generation_list and isinstance(generation_list[0], list):
+                    generation_chunk = generation_list[0][0] 
+                    if hasattr(generation_chunk, 'text'):
+                        self.output += generation_chunk.text
+                        yield generation_chunk.text
+            
+        
+
+
+        
+        self.history.save_context({"input": input}, {"output": self.output})
+        
+        return 0
     
 if __name__ == "__main__":
-    model = OllamaModel()
+    model = OllamaModel(model="mistral:latest")
     model.ans("Hello")

@@ -1,7 +1,7 @@
-from model import OllamaModel
+from app.model import OllamaModel
 
 def main():
-    bot = OllamaModel()
+    bot = OllamaModel(model="mistral:latest")
     while True:
         inp = input(">> ")
         if inp == "/quit":
